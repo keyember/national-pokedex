@@ -47,7 +47,7 @@
   padding: 8px 0 16px 70px;
   font-family: "Press Start 2P", monospace;
   font-size: 16px;
-  color: rgba(255, 255, 255, 0.95);
+  color: #fffffff2;
   text-shadow: 2px 2px 0 var(--dark-red);
   letter-spacing: 4px;
   flex-shrink: 0;
@@ -547,4 +547,54 @@
   background: var(--dark-red);
   border-radius: 50%;
   box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.3);
+}
+
+.author-credit {
+  position: relative;
+  display: grid; /* On utilise grid pour la superposition */
+  place-items: center;
+  text-decoration: none;
+  margin-top: 20px;
+  height: 30px; /* On fixe une hauteur pour éviter que le reste du Pokedex bouge */
+  transition: transform 0.3s ease-in-out;
+}
+
+/* On force le texte et l'image à occuper la même zone */
+.author-text,
+.github-logo {
+  grid-area: 1 / 1;
+  transition: all 0.3s ease-in-out;
+}
+
+.author-text {
+  color: #fffffff2;
+  text-shadow: 2px 2px 0 var(--dark-red);
+  letter-spacing: 2px;
+  font-family: "Press Start 2P", monospace;
+  font-size: 10px;
+  margin: 0;
+}
+
+.github-logo {
+  image-rendering: pixelated;
+  width: 35px;
+  height: 35px;
+  opacity: 0; /* Caché par défaut */
+  transform: scale(0.5);
+}
+
+/* --- EFFET AU SURVOL --- */
+
+.author-credit:hover {
+  transform: scale(1.2); /* Petit zoom sur l'ensemble du lien */
+}
+
+.author-credit:hover .author-text {
+  opacity: 0; /* Le texte disparait */
+  transform: translateY(-10px); /* Petit effet de glissement vers le haut */
+}
+
+.author-credit:hover .github-logo {
+  opacity: 1; /* Le logo apparait */
+  transform: scale(1); /* Il reprend sa taille normale */
 }

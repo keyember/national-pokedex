@@ -600,6 +600,15 @@ export default function PokedexList() {
         <div className="action-btn" />
         <div className="action-btn" />
       </div>
+      <a
+        href="https://github.com/keyember"
+        className="author-credit"
+        target="_blank" /* Ouvre dans un nouvel onglet */
+        rel="noopener noreferrer" /* Sécurité recommandée */
+      >
+        <p className="author-text">by Keyember</p>
+        <img src="/github.png" alt="Logo Github" className="github-logo" />
+      </a>
     </div>
   );
 }
