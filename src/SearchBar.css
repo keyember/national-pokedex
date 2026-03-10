@@ -1,0 +1,28 @@
+.searchbar-content {
+  margin-bottom: 10px;
+}
+
+.searchbar-label {
+  font-family: "Press Start 2P", monospace;
+  font-size: 6px;
+  color: var(--screen-dark);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.searchbar-input {
+  width: 100%;
+  background: var(--screen-dark);
+  color: var(--screen-bg);
+  border: none;
+  padding: 6px 8px;
+  font-family: "VT323", monospace;
+  font-size: 18px;
+  outline: none;
+  border-radius: 2px;
+  letter-spacing: 1px;
+}
+
+.searchbar-input::placeholder {
+  color: var(--screen-mid);
+}
