@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { TYPE_FR, TYPE_COLORS } from "./PokedexList.jsx";
+import { TYPE_FR, TYPE_COLORS } from "./pokemonConstants";
 import "./PokemonDetail.css";
 
 const STAT_FR = {
@@ -93,7 +93,6 @@ function StatComparator({ statsA, nameA, statsB, nameB, onClose }) {
       {statKeys.map((key) => {
         const a = statsA[key] ?? 0;
         const b = statsB[key] ?? 0;
-        const max = Math.max(a, b, 1);
         return (
           <div key={key} className="cmp-row">
             <span

@@ -96,7 +96,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   flex-shrink: 0;
 }
 
@@ -120,6 +120,42 @@
   font-size: 8px;
   color: var(--screen-dark);
   white-space: nowrap;
+}
+
+/* ── BACKGROUND LOADING BAR ── */
+.bg-loading-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.bg-loading-fill {
+  flex: 1;
+  height: 4px;
+  background: var(--screen-mid);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  opacity: 0.6;
+  animation: pulse-bar 1.5s ease-in-out infinite alternate;
+}
+
+.bg-loading-label {
+  font-family: "Press Start 2P", monospace;
+  font-size: 7px;
+  color: var(--screen-mid);
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+@keyframes pulse-bar {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 0.8;
+  }
 }
 
 /* ── LOADING ── */
@@ -329,14 +365,15 @@
   padding: 60px 0;
 }
 
+/* ── POKEMON ITEM ── */
 .pokemon-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 6px;
+  padding: 4px 8px 4px 4px;
   cursor: pointer;
   color: var(--screen-dark);
-  font-size: 24px;
+  font-size: 22px;
   border-radius: 3px;
   transition: background 0.05s;
   user-select: none;
@@ -352,40 +389,57 @@
 .pokemon-item:hover .pokeball-icon {
   color: var(--screen-bg);
 }
-.pokemon-item:hover .type-dot {
-  opacity: 0.8;
+.pokemon-item:hover .type-badge-small {
+  opacity: 0.85;
+  filter: brightness(0.85);
 }
 .pokemon-item:hover .badge {
   opacity: 0.9;
 }
 
+/* ── SPRITE MINIATURE ── */
+.pokemon-sprite-thumb {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+  /* Pas de fond — on laisse transparent */
+}
+
 .pokemon-number {
   font-family: "Press Start 2P", monospace;
-  font-size: 9px;
+  font-size: 8px;
   color: var(--screen-mid);
-  min-width: 38px;
-  padding-top: 2px;
+  min-width: 34px;
+  padding-top: 1px;
   flex-shrink: 0;
 }
 
 .pokemon-name {
   flex: 1;
+  font-size: 20px;
 }
 
+/* ── TYPE BADGES COLORÉS (liste) ── */
 .pokemon-types {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
 }
 
-.type-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
+.type-badge-small {
+  font-family: "Press Start 2P", monospace;
+  font-size: 6px;
+  padding: 3px 5px;
+  border-radius: 2px;
+  color: white;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
   flex-shrink: 0;
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  letter-spacing: 0.3px;
 }
 
+/* ── BADGES L / M ── */
 .badge {
   font-family: "Press Start 2P", monospace;
   font-size: 7px;
@@ -403,7 +457,7 @@
 }
 
 .pokeball-icon {
-  font-size: 18px;
+  font-size: 16px;
   color: rgba(15, 56, 15, 0.25);
   cursor: pointer;
   transition:
@@ -419,7 +473,7 @@
 }
 
 .fav-star {
-  font-size: 18px;
+  font-size: 16px;
   color: var(--screen-mid);
   transition:
     color 0.1s,
@@ -513,7 +567,6 @@
 }
 .goto-btn:hover {
   opacity: 0.75;
-  border-color: transparent;
 }
 
 /* ── BOTTOM ── */
@@ -551,15 +604,14 @@
 
 .author-credit {
   position: relative;
-  display: grid; /* On utilise grid pour la superposition */
+  display: grid;
   place-items: center;
   text-decoration: none;
   margin-top: 20px;
-  height: 30px; /* On fixe une hauteur pour éviter que le reste du Pokedex bouge */
+  height: 30px;
   transition: transform 0.3s ease-in-out;
 }
 
-/* On force le texte et l'image à occuper la même zone */
 .author-text,
 .github-logo {
   grid-area: 1 / 1;
@@ -579,22 +631,18 @@
   image-rendering: pixelated;
   width: 35px;
   height: 35px;
-  opacity: 0; /* Caché par défaut */
+  opacity: 0;
   transform: scale(0.5);
 }
 
-/* --- EFFET AU SURVOL --- */
-
 .author-credit:hover {
-  transform: scale(1.2); /* Petit zoom sur l'ensemble du lien */
+  transform: scale(1.2);
 }
-
 .author-credit:hover .author-text {
-  opacity: 0; /* Le texte disparait */
-  transform: translateY(-10px); /* Petit effet de glissement vers le haut */
+  opacity: 0;
+  transform: translateY(-10px);
 }
-
 .author-credit:hover .github-logo {
-  opacity: 1; /* Le logo apparait */
-  transform: scale(1); /* Il reprend sa taille normale */
+  opacity: 1;
+  transform: scale(1);
 }

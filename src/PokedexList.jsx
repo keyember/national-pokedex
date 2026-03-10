@@ -1,111 +1,86 @@
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import SearchBar from "./SearchBar";
+import { usePokemonData } from "./usePokemonData";
+import {
+  GENERATIONS,
+  TYPE_FR,
+  TYPE_COLORS,
+  TYPES,
+  SORT_OPTIONS,
+} from "./pokemonConstants";
 import "./PokedexList.css";
 
 const TOTAL = 1025;
 const PAGE_SIZE = 10;
 
-const GENERATIONS = [
-  { label: "Gen 1", min: 1, max: 151 },
-  { label: "Gen 2", min: 152, max: 251 },
-  { label: "Gen 3", min: 252, max: 386 },
-  { label: "Gen 4", min: 387, max: 493 },
-  { label: "Gen 5", min: 494, max: 649 },
-  { label: "Gen 6", min: 650, max: 721 },
-  { label: "Gen 7", min: 722, max: 809 },
-  { label: "Gen 8", min: 810, max: 905 },
-  { label: "Gen 9", min: 906, max: 1025 },
-];
+function getSpriteUrl(id) {
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+}
 
-const TYPES = [
-  "normal",
-  "fire",
-  "water",
-  "electric",
-  "grass",
-  "ice",
-  "fighting",
-  "poison",
-  "ground",
-  "flying",
-  "psychic",
-  "bug",
-  "rock",
-  "ghost",
-  "dragon",
-  "dark",
-  "steel",
-  "fairy",
-];
+// Wrapper qui remet page à 0 automatiquement quand un filtre change
+function usePagedFilters() {
+  const [state, setState] = useState({
+    search: "",
+    genFilter: null,
+    typeFilter: null,
+    sortBy: "id",
+    showLegendary: false,
+    showMythical: false,
+    showFavOnly: false,
+    showCapturedOnly: false,
+    showUncapturedOnly: false,
+    page: 0,
+  });
 
-export const TYPE_FR = {
-  normal: "Normal",
-  fire: "Feu",
-  water: "Eau",
-  electric: "Electrik",
-  grass: "Plante",
-  ice: "Glace",
-  fighting: "Combat",
-  poison: "Poison",
-  ground: "Sol",
-  flying: "Vol",
-  psychic: "Psy",
-  bug: "Insecte",
-  rock: "Roche",
-  ghost: "Spectre",
-  dragon: "Dragon",
-  dark: "Tenebres",
-  steel: "Acier",
-  fairy: "Fee",
-};
+  const setFilter = (key, value) =>
+    setState((prev) => ({ ...prev, [key]: value, page: 0 }));
 
-export const TYPE_COLORS = {
-  normal: "#A8A878",
-  fire: "#F08030",
-  water: "#6890F0",
-  electric: "#F8D030",
-  grass: "#78C850",
-  ice: "#98D8D8",
-  fighting: "#C03028",
-  poison: "#A040A0",
-  ground: "#E0C068",
-  flying: "#A890F0",
-  psychic: "#F85888",
-  bug: "#A8B820",
-  rock: "#B8A038",
-  ghost: "#705898",
-  dragon: "#7038F8",
-  dark: "#705848",
-  steel: "#B8B8D0",
-  fairy: "#EE99AC",
-};
+  const setPage = (value) =>
+    setState((prev) => ({
+      ...prev,
+      page: typeof value === "function" ? value(prev.page) : value,
+    }));
 
-const SORT_OPTIONS = [
-  { value: "id", label: "N° (defaut)" },
-  { value: "name", label: "Nom A-Z" },
-  { value: "hp", label: "PV" },
-  { value: "attack", label: "Attaque" },
-  { value: "defense", label: "Defense" },
-  { value: "speed", label: "Vitesse" },
-  { value: "total", label: "Total stats" },
-];
+  const resetFilters = () =>
+    setState((prev) => ({
+      ...prev,
+      genFilter: null,
+      typeFilter: null,
+      sortBy: "id",
+      showLegendary: false,
+      showMythical: false,
+      showFavOnly: false,
+      showCapturedOnly: false,
+      showUncapturedOnly: false,
+      page: 0,
+    }));
+
+  return { ...state, setFilter, setPage, resetFilters };
+}
 
 export default function PokedexList() {
-  const [pokemons, setPokemons] = useState([]);
-  const [loadedCount, setLoadedCount] = useState(0);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(0);
-  const [pageInput, setPageInput] = useState("");
-  const [genFilter, setGenFilter] = useState(null);
-  const [typeFilter, setTypeFilter] = useState(null);
-  const [sortBy, setSortBy] = useState("id");
+  const { pokemons, loadedCount, isReady } = usePokemonData();
+
+  const {
+    search,
+    genFilter,
+    typeFilter,
+    sortBy,
+    showFilters: _sf, // géré séparément car ne reset pas la page
+    showLegendary,
+    showMythical,
+    showFavOnly,
+    showCapturedOnly,
+    showUncapturedOnly,
+    page,
+    setFilter,
+    setPage,
+    resetFilters,
+  } = usePagedFilters();
+
   const [showFilters, setShowFilters] = useState(false);
-  const [showLegendary, setShowLegendary] = useState(false);
-  const [showMythical, setShowMythical] = useState(false);
-  const [showFavOnly, setShowFavOnly] = useState(false);
-  const [showCapturedOnly, setShowCapturedOnly] = useState(false);
-  const [showUncapturedOnly, setShowUncapturedOnly] = useState(false);
+  const [pageInput, setPageInput] = useState("");
   const [favorites, setFavorites] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("poke-favorites") || "[]");
@@ -120,85 +95,9 @@ export default function PokedexList() {
       return [];
     }
   });
+
   const navigate = useNavigate();
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-    const BATCH = 50;
-
-    const fetchSpecies = async () => {
-      try {
-        const resp = await fetch(
-          "https://pokeapi.co/api/v2/pokemon-species?limit=1025",
-        );
-        const data = await resp.json();
-        const speciesList = data.results;
-        const results = new Array(speciesList.length);
-
-        for (let i = 0; i < speciesList.length; i += BATCH) {
-          if (cancelled) return;
-          const batch = speciesList.slice(i, i + BATCH);
-          const fetched = await Promise.all(
-            batch.map(async (specie, bi) => {
-              const [spRes, pkRes] = await Promise.all([
-                fetch(specie.url),
-                fetch(
-                  `https://pokeapi.co/api/v2/pokemon/${specie.url.split("/").filter(Boolean).pop()}`,
-                ),
-              ]);
-              const spJson = await spRes.json();
-              const pkJson = await pkRes.json();
-              const frObj = spJson.names.find((n) => n.language.name === "fr");
-              const statsMap = {};
-              for (const s of pkJson.stats) statsMap[s.stat.name] = s.base_stat;
-              return {
-                idx: i + bi,
-                entry: {
-                  id: spJson.id,
-                  nameEn: spJson.name,
-                  nameFr: frObj ? frObj.name : spJson.name,
-                  types: pkJson.types.map((t) => t.type.name),
-                  isLegendary: spJson.is_legendary,
-                  isMythical: spJson.is_mythical,
-                  stats: statsMap,
-                  total: Object.values(statsMap).reduce((a, b) => a + b, 0),
-                },
-              };
-            }),
-          );
-          if (cancelled) return;
-          for (const { idx, entry } of fetched) results[idx] = entry;
-          setLoadedCount(Math.min(i + BATCH, speciesList.length));
-        }
-        if (!cancelled) setPokemons(results.filter(Boolean));
-      } catch (err) {
-        console.error("Error fetching species:", err);
-      }
-    };
-
-    fetchSpecies();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // ── Reset page on filter change ────────────────────────────────────────────
-  useEffect(() => {
-    setPage(0);
-  }, [
-    search,
-    genFilter,
-    typeFilter,
-    sortBy,
-    showLegendary,
-    showMythical,
-    showFavOnly,
-    showCapturedOnly,
-    showUncapturedOnly,
-  ]);
-
-  // ── Toggles ────────────────────────────────────────────────────────────────
   const toggleFav = (e, id) => {
     e.stopPropagation();
     setFavorites((prev) => {
@@ -221,7 +120,6 @@ export default function PokedexList() {
     });
   };
 
-  // ── Filter + Sort ──────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     let list = pokemons.filter((p) => {
       if (
@@ -242,7 +140,6 @@ export default function PokedexList() {
       if (showUncapturedOnly && captured.includes(p.id)) return false;
       return true;
     });
-
     return [...list].sort((a, b) => {
       if (sortBy === "name") return a.nameFr.localeCompare(b.nameFr);
       if (sortBy === "total") return b.total - a.total;
@@ -266,8 +163,11 @@ export default function PokedexList() {
   ]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const handleClick = (p) => navigate(`/pokemon/${p.id}`);
+  const safePage = Math.min(page, Math.max(0, totalPages - 1));
+  const paginated = filtered.slice(
+    safePage * PAGE_SIZE,
+    (safePage + 1) * PAGE_SIZE,
+  );
 
   const activeFiltersCount = [
     genFilter,
@@ -279,19 +179,7 @@ export default function PokedexList() {
     showUncapturedOnly,
   ].filter(Boolean).length;
 
-  const resetFilters = () => {
-    setGenFilter(null);
-    setTypeFilter(null);
-    setShowLegendary(false);
-    setShowMythical(false);
-    setShowFavOnly(false);
-    setShowCapturedOnly(false);
-    setShowUncapturedOnly(false);
-    setSortBy("id");
-  };
-
-  // ── Loading screen ─────────────────────────────────────────────────────────
-  if (pokemons.length < TOTAL) {
+  if (!isReady && pokemons.length < 50) {
     return (
       <div className="pokedex-shell">
         <div className="pokedex-header">POKEDEX</div>
@@ -324,14 +212,12 @@ export default function PokedexList() {
     );
   }
 
-  // ── Main render ────────────────────────────────────────────────────────────
   return (
     <div className="pokedex-shell">
       <div className="pokedex-header">POKEDEX</div>
 
       <div className="screen-frame">
         <div className="screen">
-          {/* Capture progress */}
           <div className="capture-progress">
             <div className="capture-progress-bar">
               <div
@@ -344,9 +230,20 @@ export default function PokedexList() {
             </span>
           </div>
 
-          <SearchBar value={search} onChange={setSearch} />
+          {!isReady && (
+            <div className="bg-loading-bar">
+              <div
+                className="bg-loading-fill"
+                style={{ width: `${(loadedCount / TOTAL) * 100}%` }}
+              />
+              <span className="bg-loading-label">
+                {loadedCount} / {TOTAL}
+              </span>
+            </div>
+          )}
 
-          {/* Toolbar */}
+          <SearchBar value={search} onChange={(v) => setFilter("search", v)} />
+
           <div className="list-toolbar">
             <span className="pokemon-count">
               {filtered.length} / {pokemons.length}
@@ -367,7 +264,7 @@ export default function PokedexList() {
               <select
                 className="sort-select"
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) => setFilter("sortBy", e.target.value)}
               >
                 {SORT_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -378,14 +275,13 @@ export default function PokedexList() {
             </div>
           </div>
 
-          {/* Filter panel */}
           {showFilters && (
             <div className="filter-panel">
               <div className="filter-section-label">GENERATION</div>
               <div className="filter-chips">
                 <button
                   className={"chip" + (!genFilter ? " active" : "")}
-                  onClick={() => setGenFilter(null)}
+                  onClick={() => setFilter("genFilter", null)}
                 >
                   TOUTES
                 </button>
@@ -396,7 +292,10 @@ export default function PokedexList() {
                       "chip" + (genFilter === g.label ? " active" : "")
                     }
                     onClick={() =>
-                      setGenFilter(genFilter === g.label ? null : g.label)
+                      setFilter(
+                        "genFilter",
+                        genFilter === g.label ? null : g.label,
+                      )
                     }
                   >
                     {g.label}
@@ -408,7 +307,7 @@ export default function PokedexList() {
               <div className="filter-chips">
                 <button
                   className={"chip" + (!typeFilter ? " active" : "")}
-                  onClick={() => setTypeFilter(null)}
+                  onClick={() => setFilter("typeFilter", null)}
                 >
                   TOUS
                 </button>
@@ -419,7 +318,9 @@ export default function PokedexList() {
                       "chip type-chip" + (typeFilter === t ? " active" : "")
                     }
                     style={{ "--type-color": TYPE_COLORS[t] }}
-                    onClick={() => setTypeFilter(typeFilter === t ? null : t)}
+                    onClick={() =>
+                      setFilter("typeFilter", typeFilter === t ? null : t)
+                    }
                   >
                     {TYPE_FR[t]}
                   </button>
@@ -430,27 +331,27 @@ export default function PokedexList() {
               <div className="filter-chips">
                 <button
                   className={"chip" + (showLegendary ? " active" : "")}
-                  onClick={() => setShowLegendary((v) => !v)}
+                  onClick={() => setFilter("showLegendary", !showLegendary)}
                 >
                   Legendaire
                 </button>
                 <button
                   className={"chip" + (showMythical ? " active" : "")}
-                  onClick={() => setShowMythical((v) => !v)}
+                  onClick={() => setFilter("showMythical", !showMythical)}
                 >
                   Mythique
                 </button>
                 <button
                   className={"chip" + (showFavOnly ? " active" : "")}
-                  onClick={() => setShowFavOnly((v) => !v)}
+                  onClick={() => setFilter("showFavOnly", !showFavOnly)}
                 >
                   ★ Favoris
                 </button>
                 <button
                   className={"chip" + (showCapturedOnly ? " active" : "")}
                   onClick={() => {
-                    setShowCapturedOnly((v) => !v);
-                    setShowUncapturedOnly(false);
+                    setFilter("showCapturedOnly", !showCapturedOnly);
+                    setFilter("showUncapturedOnly", false);
                   }}
                 >
                   ⚪ Captures
@@ -458,8 +359,8 @@ export default function PokedexList() {
                 <button
                   className={"chip" + (showUncapturedOnly ? " active" : "")}
                   onClick={() => {
-                    setShowUncapturedOnly((v) => !v);
-                    setShowCapturedOnly(false);
+                    setFilter("showUncapturedOnly", !showUncapturedOnly);
+                    setFilter("showCapturedOnly", false);
                   }}
                 >
                   ○ Non captures
@@ -473,7 +374,6 @@ export default function PokedexList() {
             </div>
           )}
 
-          {/* List */}
           <div className="pokemon-list">
             {paginated.length === 0 ? (
               <div className="no-result">AUCUN RESULTAT</div>
@@ -482,8 +382,14 @@ export default function PokedexList() {
                 <div
                   key={p.id}
                   className="pokemon-item"
-                  onClick={() => handleClick(p)}
+                  onClick={() => navigate(`/pokemon/${p.id}`)}
                 >
+                  <img
+                    className="pokemon-sprite-thumb"
+                    src={p.sprite || getSpriteUrl(p.id)}
+                    alt={p.nameFr}
+                    loading="lazy"
+                  />
                   <span className="pokemon-number">
                     #{String(p.id).padStart(3, "0")}
                   </span>
@@ -492,10 +398,12 @@ export default function PokedexList() {
                     {p.types.map((t) => (
                       <span
                         key={t}
-                        className="type-dot"
+                        className="type-badge-small"
                         style={{ background: TYPE_COLORS[t] }}
                         title={TYPE_FR[t]}
-                      />
+                      >
+                        {TYPE_FR[t]}
+                      </span>
                     ))}
                   </div>
                   {p.isLegendary && (
@@ -532,23 +440,22 @@ export default function PokedexList() {
             )}
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="pagination">
               <button
                 className="page-btn"
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
+                disabled={safePage === 0}
               >
                 ◀ PREC
               </button>
               <span className="page-info">
-                {page + 1} / {totalPages}
+                {safePage + 1} / {totalPages}
               </span>
               <button
                 className="page-btn"
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={page === totalPages - 1}
+                disabled={safePage === totalPages - 1}
               >
                 SUIV ▶
               </button>
@@ -603,8 +510,8 @@ export default function PokedexList() {
       <a
         href="https://github.com/keyember"
         className="author-credit"
-        target="_blank" /* Ouvre dans un nouvel onglet */
-        rel="noopener noreferrer" /* Sécurité recommandée */
+        target="_blank"
+        rel="noopener noreferrer"
       >
         <p className="author-text">by Keyember</p>
         <img src="/github.png" alt="Logo Github" className="github-logo" />
