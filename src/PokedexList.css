@@ -25,7 +25,6 @@
   border: 4px solid white;
   box-shadow: 0 0 0 3px var(--dark-red);
   z-index: 10;
-  flex-shrink: 0;
 }
 
 .pokedex-shell::after {
@@ -92,6 +91,37 @@
   z-index: 100;
 }
 
+/* ── CAPTURE PROGRESS ── */
+.capture-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.capture-progress-bar {
+  flex: 1;
+  height: 10px;
+  background: rgba(15, 56, 15, 0.2);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.capture-progress-fill {
+  height: 100%;
+  background: var(--screen-dark);
+  border-radius: 5px;
+  transition: width 0.4s ease;
+}
+
+.capture-progress-label {
+  font-family: "Press Start 2P", monospace;
+  font-size: 8px;
+  color: var(--screen-dark);
+  white-space: nowrap;
+}
+
 /* ── LOADING ── */
 .loading {
   display: flex;
@@ -140,19 +170,27 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   flex-shrink: 0;
+  gap: 8px;
 }
 
 .pokemon-count {
   font-family: "Press Start 2P", monospace;
   font-size: 9px;
   color: var(--screen-mid);
+  white-space: nowrap;
 }
 
-.fav-filter-btn {
+.toolbar-btns {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.filter-toggle-btn {
   font-family: "Press Start 2P", monospace;
-  font-size: 9px;
+  font-size: 8px;
   background: none;
   border: 2px solid var(--screen-mid);
   color: var(--screen-mid);
@@ -160,12 +198,106 @@
   cursor: pointer;
   border-radius: 3px;
   transition: all 0.1s;
+  white-space: nowrap;
 }
-.fav-filter-btn:hover,
-.fav-filter-btn.active {
+.filter-toggle-btn:hover,
+.filter-toggle-btn.active {
   background: var(--screen-dark);
   color: var(--screen-bg);
   border-color: var(--screen-dark);
+}
+.filter-toggle-btn.has-filters {
+  border-color: var(--screen-dark);
+  color: var(--screen-dark);
+}
+
+.sort-select {
+  font-family: "Press Start 2P", monospace;
+  font-size: 7px;
+  background: var(--screen-dark);
+  color: var(--screen-bg);
+  border: none;
+  padding: 5px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  outline: none;
+}
+.sort-select option {
+  background: var(--screen-dark);
+  color: var(--screen-bg);
+}
+
+/* ── FILTER PANEL ── */
+.filter-panel {
+  background: rgba(15, 56, 15, 0.08);
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.filter-section-label {
+  font-family: "Press Start 2P", monospace;
+  font-size: 7px;
+  color: var(--screen-mid);
+  margin-bottom: 6px;
+  margin-top: 10px;
+}
+.filter-section-label:first-child {
+  margin-top: 0;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.chip {
+  font-family: "Press Start 2P", monospace;
+  font-size: 7px;
+  background: rgba(15, 56, 15, 0.12);
+  border: 1px solid rgba(15, 56, 15, 0.3);
+  color: var(--screen-dark);
+  padding: 4px 7px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.1s;
+  white-space: nowrap;
+}
+.chip:hover {
+  background: rgba(15, 56, 15, 0.25);
+  border-color: transparent;
+}
+.chip.active {
+  background: var(--screen-dark);
+  color: var(--screen-bg);
+  border-color: var(--screen-dark);
+}
+
+.type-chip {
+  border-color: var(--type-color);
+  color: var(--screen-dark);
+}
+.type-chip:hover {
+  background: var(--type-color);
+  color: white;
+  border-color: transparent;
+}
+.type-chip.active {
+  background: var(--type-color);
+  color: white;
+  border-color: var(--type-color);
+}
+
+.reset-chip {
+  border-color: #a00;
+  color: #700;
+}
+.reset-chip:hover {
+  background: #c00;
+  color: white;
 }
 
 /* ── LIST ── */
@@ -200,16 +332,15 @@
 .pokemon-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 14px;
+  gap: 8px;
+  padding: 8px 12px;
   cursor: pointer;
   color: var(--screen-dark);
-  font-size: 28px;
+  font-size: 24px;
   border-radius: 3px;
   transition: background 0.05s;
   user-select: none;
 }
-
 .pokemon-item:hover {
   background: var(--screen-dark);
   color: var(--screen-bg);
@@ -217,29 +348,83 @@
 .pokemon-item:hover .pokemon-number {
   color: var(--screen-light);
 }
-.pokemon-item:hover .fav-star {
+.pokemon-item:hover .fav-star,
+.pokemon-item:hover .pokeball-icon {
   color: var(--screen-bg);
+}
+.pokemon-item:hover .type-dot {
+  opacity: 0.8;
+}
+.pokemon-item:hover .badge {
+  opacity: 0.9;
 }
 
 .pokemon-number {
   font-family: "Press Start 2P", monospace;
-  font-size: 10px;
+  font-size: 9px;
   color: var(--screen-mid);
-  min-width: 42px;
-  padding-top: 3px;
+  min-width: 38px;
+  padding-top: 2px;
+  flex-shrink: 0;
 }
 
 .pokemon-name {
   flex: 1;
 }
 
-.fav-star {
-  font-size: 22px;
-  color: var(--screen-mid);
-  padding: 0 4px;
+.pokemon-types {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.type-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.badge {
+  font-family: "Press Start 2P", monospace;
+  font-size: 7px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.badge.legend {
+  background: #d4a017;
+  color: #3d2c00;
+}
+.badge.mythic {
+  background: #c040c0;
+  color: white;
+}
+
+.pokeball-icon {
+  font-size: 18px;
+  color: rgba(15, 56, 15, 0.25);
+  cursor: pointer;
   transition:
     color 0.1s,
     transform 0.1s;
+  flex-shrink: 0;
+}
+.pokeball-icon.captured {
+  color: var(--screen-dark);
+}
+.pokeball-icon:hover {
+  transform: scale(1.3);
+}
+
+.fav-star {
+  font-size: 18px;
+  color: var(--screen-mid);
+  transition:
+    color 0.1s,
+    transform 0.1s;
+  flex-shrink: 0;
 }
 .fav-star.active {
   color: var(--screen-dark);
@@ -253,8 +438,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 14px;
-  padding-top: 12px;
+  margin-top: 12px;
+  padding-top: 10px;
   border-top: 2px solid rgba(15, 56, 15, 0.2);
   flex-shrink: 0;
 }
@@ -265,7 +450,7 @@
   background: var(--screen-dark);
   color: var(--screen-bg);
   border: none;
-  padding: 8px 14px;
+  padding: 7px 12px;
   cursor: pointer;
   border-radius: 3px;
   transition: opacity 0.15s;
@@ -290,7 +475,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin-top: 10px;
+  margin-top: 8px;
   flex-shrink: 0;
 }
 
@@ -321,7 +506,7 @@
   background: var(--screen-dark);
   color: var(--screen-bg);
   border: none;
-  padding: 8px 12px;
+  padding: 7px 12px;
   cursor: pointer;
   border-radius: 3px;
   transition: opacity 0.15s;
@@ -347,18 +532,15 @@
   grid-template-rows: repeat(3, 20px);
   gap: 3px;
 }
-
 .d-pad-btn {
   background: var(--dark-red);
   border-radius: 3px;
   box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.3);
 }
-
 .d-pad-center {
   background: var(--dark-red);
   border-radius: 2px;
 }
-
 .action-btn {
   width: 32px;
   height: 32px;
