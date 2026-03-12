@@ -1,6 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { TYPE_FR, TYPE_COLORS } from "./pokemonConstants";
+import {
+  TYPE_FR,
+  TYPE_COLORS,
+  TYPES,
+  computeDefenseChart,
+} from "./pokemonConstants";
 import "./PokemonDetail.css";
 
 const STAT_FR = {
@@ -70,7 +75,7 @@ function describeEvolution(detail) {
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
-// ── Comparator mini-component ──────────────────────────────────────────────────
+// ── Comparator ────────────────────────────────────────────────────────────────
 function StatComparator({ statsA, nameA, statsB, nameB, onClose }) {
   const statKeys = [
     "hp",
@@ -156,6 +161,148 @@ function StatComparator({ statsA, nameA, statsB, nameB, onClose }) {
   );
 }
 
+// ── Type Matchup Chart ─────────────────────────────────────────────────────────
+function TypeMatchupChart({ defenderTypes }) {
+  const chart = computeDefenseChart(defenderTypes);
+
+  const immune = TYPES.filter((t) => chart[t] === 0);
+  const quarter = TYPES.filter((t) => chart[t] === 0.25);
+  const half = TYPES.filter((t) => chart[t] === 0.5);
+  const neutral = TYPES.filter((t) => chart[t] === 1);
+  const double = TYPES.filter((t) => chart[t] === 2);
+  const quadruple = TYPES.filter((t) => chart[t] === 4);
+
+  const groups = [
+    { label: "×4", types: quadruple, className: "matchup-x4" },
+    { label: "×2", types: double, className: "matchup-x2" },
+    { label: "×1", types: neutral, className: "matchup-x1" },
+    { label: "×½", types: half, className: "matchup-half" },
+    { label: "×¼", types: quarter, className: "matchup-quarter" },
+    { label: "×0", types: immune, className: "matchup-immune" },
+  ].filter((g) => g.types.length > 0);
+
+  return (
+    <div className="matchup-grid">
+      {groups.map((g) => (
+        <div key={g.label} className="matchup-row">
+          <span className={`matchup-mult ${g.className}`}>{g.label}</span>
+          <div className="matchup-badges">
+            {g.types.map((t) => (
+              <span
+                key={t}
+                className="matchup-badge"
+                style={{ background: TYPE_COLORS[t] }}
+                title={TYPE_FR[t]}
+              >
+                {TYPE_FR[t]}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Alternate Forms ────────────────────────────────────────────────────────────
+function AlternateForms({ speciesName, currentFormName, onFormClick }) {
+  const [forms, setForms] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch(
+          `https://pokeapi.co/api/v2/pokemon-species/${speciesName}`,
+        );
+        const json = await res.json();
+        // varieties = toutes les formes liées à cette espèce
+        const varieties = json.varieties;
+        if (varieties.length <= 1) {
+          setForms([]);
+          return;
+        }
+
+        const details = await Promise.all(
+          varieties.map(async (v) => {
+            try {
+              const r = await fetch(v.pokemon.url);
+              const pk = await r.json();
+              // Nom lisible : on retire le préfixe "nom-base-"
+              const rawName = pk.name;
+              const label =
+                rawName
+                  .replace(speciesName + "-", "")
+                  .replace(/-/g, " ")
+                  .replace(/\b\w/g, (c) => c.toUpperCase()) || "Base";
+              const isDefault = v.is_default;
+              return {
+                name: rawName,
+                label: isDefault ? "Base" : label,
+                sprite: pk.sprites.front_default,
+                types: pk.types.map((t) => t.type.name),
+                stats: Object.fromEntries(
+                  pk.stats.map((s) => [s.stat.name, s.base_stat]),
+                ),
+                id: pk.id,
+                isDefault,
+              };
+            } catch {
+              return null;
+            }
+          }),
+        );
+        if (!cancelled) setForms(details.filter(Boolean));
+      } catch {
+        if (!cancelled) setForms([]);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [speciesName]);
+
+  if (forms === null)
+    return <div className="forms-loading">Chargement formes...</div>;
+  if (forms.length <= 1) return null;
+
+  return (
+    <div className="forms-grid">
+      {forms.map((f) => (
+        <div
+          key={f.name}
+          className={
+            "form-card" +
+            (f.name === currentFormName ? " current" : " clickable")
+          }
+          onClick={() => f.name !== currentFormName && onFormClick(f)}
+          title={f.label}
+        >
+          {f.sprite ? (
+            <img className="form-sprite" src={f.sprite} alt={f.label} />
+          ) : (
+            <div className="form-sprite-placeholder">?</div>
+          )}
+          <div className="form-label">{f.label}</div>
+          <div className="form-types">
+            {f.types.map((t) => (
+              <span
+                key={t}
+                className="form-type-badge"
+                style={{ background: TYPE_COLORS[t] }}
+              >
+                {TYPE_FR[t]}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
 export default function PokemonDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -173,6 +320,8 @@ export default function PokemonDetail() {
   const [isFav, setIsFav] = useState(false);
   const [isCaptured, setIsCaptured] = useState(false);
   const [cryPlaying, setCryPlaying] = useState(false);
+  // Forme active (null = forme de base chargée via l'id de la route)
+  const [activeForm, setActiveForm] = useState(null);
   const audioRef = useRef(null);
 
   // ── Fetch main data ──────────────────────────────────────────────────────────
@@ -185,6 +334,7 @@ export default function PokemonDetail() {
       setCompareData(null);
       setCompareId("");
       setShiny(false);
+      setActiveForm(null);
 
       try {
         const [respPokemon, respSpecies] = await Promise.all([
@@ -311,7 +461,7 @@ export default function PokemonDetail() {
           ),
         );
       } catch {
-        /* localStorage not available */
+        /* noop */
       }
       return next;
     });
@@ -329,7 +479,7 @@ export default function PokemonDetail() {
           ),
         );
       } catch {
-        /* localStorage not available */
+        /* noop */
       }
       return next;
     });
@@ -367,6 +517,16 @@ export default function PokemonDetail() {
     );
   }
 
+  // Données affichées : forme active si sélectionnée, sinon données de base
+  const displayPokemon = activeForm ?? pokemon;
+  const displayTypes = activeForm
+    ? activeForm.types
+    : pokemon.types.map((t) => t.type.name);
+  const displayStats = activeForm
+    ? activeForm.stats
+    : Object.fromEntries(pokemon.stats.map((s) => [s.stat.name, s.base_stat]));
+  const displayTotal = Object.values(displayStats).reduce((a, b) => a + b, 0);
+
   const frNameObj = species.names.find((n) => n.language.name === "fr");
   const nameFr = frNameObj ? frNameObj.name : species.name;
   const frFlavorObj = species.flavor_text_entries.find(
@@ -375,11 +535,14 @@ export default function PokemonDetail() {
   const flavor = frFlavorObj
     ? frFlavorObj.flavor_text.replace(/\f|\n/g, " ")
     : "—";
+
   const sprite = shiny
-    ? pokemon.sprites.front_shiny
-    : pokemon.sprites.front_default;
-  const statsMap = {};
-  for (const s of pokemon.stats) statsMap[s.stat.name] = s.base_stat;
+    ? activeForm
+      ? displayPokemon.sprites?.front_shiny
+      : pokemon.sprites.front_shiny
+    : activeForm
+      ? displayPokemon.sprite
+      : pokemon.sprites.front_default;
 
   return (
     <div className="detail-shell">
@@ -452,19 +615,23 @@ export default function PokemonDetail() {
                   </button>
                 </div>
               </div>
-              <div className="detail-name">{nameFr.toUpperCase()}</div>
+              <div className="detail-name">
+                {nameFr.toUpperCase()}
+                {activeForm && (
+                  <span className="form-name-tag">{activeForm.label}</span>
+                )}
+              </div>
               <div className="types-row">
-                {pokemon.types.map((t) => (
+                {displayTypes.map((t) => (
                   <span
-                    key={t.type.name}
+                    key={t}
                     className="type-badge"
                     style={{
-                      background:
-                        TYPE_COLORS[t.type.name] ?? "var(--screen-dark)",
+                      background: TYPE_COLORS[t] ?? "var(--screen-dark)",
                       color: "white",
                     }}
                   >
-                    {TYPE_FR[t.type.name] || t.type.name}
+                    {TYPE_FR[t] || t}
                   </span>
                 ))}
               </div>
@@ -487,29 +654,39 @@ export default function PokemonDetail() {
 
           <div className="detail-flavor">{flavor}</div>
 
-          {/* Stats */}
-          <div className="stats-title">── STATS ──</div>
-          {pokemon.stats.map((s) => (
-            <div key={s.stat.name} className="stat-row">
-              <span className="stat-name">
-                {STAT_FR[s.stat.name] || s.stat.name}
-              </span>
+          {/* ── FORMES ALTERNATIVES ── */}
+          <div className="section-title">── FORMES ──</div>
+          <AlternateForms
+            speciesName={species.name}
+            currentFormName={activeForm ? activeForm.name : pokemon.name}
+            onFormClick={(f) =>
+              setActiveForm(f.name === pokemon.name ? null : f)
+            }
+          />
+
+          {/* ── STATS ── */}
+          <div className="stats-title">
+            ── STATS {activeForm ? `(${activeForm.label})` : ""} ──
+          </div>
+          {Object.entries(displayStats).map(([statName, val]) => (
+            <div key={statName} className="stat-row">
+              <span className="stat-name">{STAT_FR[statName] || statName}</span>
               <div className="stat-bar-track">
                 <div
                   className="stat-bar-fill"
-                  style={{
-                    width: `${Math.min(100, (s.base_stat / 255) * 100)}%`,
-                  }}
+                  style={{ width: `${Math.min(100, (val / 255) * 100)}%` }}
                 />
               </div>
-              <span className="stat-val">{s.base_stat}</span>
+              <span className="stat-val">{val}</span>
             </div>
           ))}
-          <div className="stat-total">
-            TOTAL : {pokemon.stats.reduce((acc, s) => acc + s.base_stat, 0)}
-          </div>
+          <div className="stat-total">TOTAL : {displayTotal}</div>
 
-          {/* Comparator */}
+          {/* ── FAIBLESSES / RESISTANCES ── */}
+          <div className="section-title">── EFFICACITES ──</div>
+          <TypeMatchupChart defenderTypes={displayTypes} />
+
+          {/* ── COMPARATEUR ── */}
           <div className="comparator-section">
             <div className="section-title">── COMPARER ──</div>
             {!compareData ? (
@@ -536,8 +713,8 @@ export default function PokemonDetail() {
               </div>
             ) : (
               <StatComparator
-                statsA={statsMap}
-                nameA={nameFr}
+                statsA={displayStats}
+                nameA={activeForm ? activeForm.label : nameFr}
                 statsB={compareData.stats}
                 nameB={compareData.nameFr}
                 onClose={() => {
@@ -548,7 +725,7 @@ export default function PokemonDetail() {
             )}
           </div>
 
-          {/* Moves */}
+          {/* ── ATTAQUES ── */}
           <div className="moves-section">
             <div
               className="section-title"
@@ -599,7 +776,7 @@ export default function PokemonDetail() {
               ))}
           </div>
 
-          {/* Evolutions */}
+          {/* ── EVOLUTIONS ── */}
           {evoChain && evoChain.length > 1 && (
             <>
               <div className="evo-title">── EVOLUTIONS ──</div>

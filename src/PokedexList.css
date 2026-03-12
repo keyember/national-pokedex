@@ -244,7 +244,12 @@
 }
 .filter-toggle-btn.has-filters {
   border-color: var(--screen-dark);
-  color: var(--screen-dark);
+}
+/* ajoute ceci à la fin du bloc toolbar */
+.filter-toggle-btn.active.has-filters {
+  background: var(--screen-dark);
+  color: var(--screen-bg); /* texte clair */
+  border-color: var(--screen-dark);
 }
 
 .sort-select {

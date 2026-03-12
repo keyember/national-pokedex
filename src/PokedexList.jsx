@@ -4,6 +4,7 @@ import SearchBar from "./SearchBar";
 import { usePokemonData } from "./usePokemonData";
 import {
   GENERATIONS,
+  GAMES,
   TYPE_FR,
   TYPE_COLORS,
   TYPES,
@@ -23,6 +24,7 @@ function usePagedFilters() {
   const [state, setState] = useState({
     search: "",
     genFilter: null,
+    gameFilter: null,
     typeFilter: null,
     sortBy: "id",
     showLegendary: false,
@@ -46,6 +48,7 @@ function usePagedFilters() {
     setState((prev) => ({
       ...prev,
       genFilter: null,
+      gameFilter: null,
       typeFilter: null,
       sortBy: "id",
       showLegendary: false,
@@ -65,6 +68,7 @@ export default function PokedexList() {
   const {
     search,
     genFilter,
+    gameFilter,
     typeFilter,
     sortBy,
     showFilters: _sf, // géré séparément car ne reset pas la page
@@ -132,6 +136,10 @@ export default function PokedexList() {
         const gen = GENERATIONS.find((g) => g.label === genFilter);
         if (gen && (p.id < gen.min || p.id > gen.max)) return false;
       }
+      if (gameFilter) {
+        const game = GAMES.find((g) => g.label === gameFilter);
+        if (game && (p.id < game.min || p.id > game.max)) return false;
+      }
       if (typeFilter && !p.types.includes(typeFilter)) return false;
       if (showLegendary && !p.isLegendary) return false;
       if (showMythical && !p.isMythical) return false;
@@ -151,6 +159,7 @@ export default function PokedexList() {
     pokemons,
     search,
     genFilter,
+    gameFilter,
     typeFilter,
     sortBy,
     showLegendary,
@@ -171,6 +180,7 @@ export default function PokedexList() {
 
   const activeFiltersCount = [
     genFilter,
+    gameFilter,
     typeFilter,
     showLegendary,
     showMythical,
@@ -277,6 +287,32 @@ export default function PokedexList() {
 
           {showFilters && (
             <div className="filter-panel">
+              <div className="filter-section-label">JEU</div>
+              <div className="filter-chips">
+                <button
+                  className={"chip" + (!gameFilter ? " active" : "")}
+                  onClick={() => setFilter("gameFilter", null)}
+                >
+                  TOUS
+                </button>
+                {GAMES.map((g) => (
+                  <button
+                    key={g.label}
+                    className={
+                      "chip" + (gameFilter === g.label ? " active" : "")
+                    }
+                    onClick={() =>
+                      setFilter(
+                        "gameFilter",
+                        gameFilter === g.label ? null : g.label,
+                      )
+                    }
+                  >
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+
               <div className="filter-section-label">GENERATION</div>
               <div className="filter-chips">
                 <button
